@@ -58,16 +58,14 @@ void createFile()
     y écrit le header "date;lumin;temp;hygr;pressure;latitude;longitude"
     Renvoie une erreur si le fichier ne s'ouvre pas
     */
-    if (!SD.begin(CHIP_SELECT)) {
-        errorAccessOrWriteSD();
-    }
+    SD.begin(CHIP_SELECT);
 
     assignFileName();
     if (SD.exists(fileName)) {SD.remove(fileName);} // écrase le potentiel fichier du même nom
     file = SD.open(fileName, FILE_WRITE); // ouvre le fichier
     if (!(file)) errorSDFull(); // renvoie une erreur si le fichier ne s'ouvre pas avec code LED carte SD pleine (car c'est probablement la raison pour laquelle ça s'ouvrira pas)
 
-    file.print(F("date;lumin;temp;hygr;pressure;position\n")); //écrit l'en-tête
+    file.print(F("date;lumin;hygr;pressure;temp;position\n")); //écrit l'en-tête
     file.flush();
 }
 void getDateAndTime(char *tab)
@@ -113,7 +111,7 @@ void writeInFile()
     Écrit dans le fichier ouvert la date et les données des capteurs
     */
     Print* output;
-    if (actualMod != MAINTENANCE_MOD)
+    if (actualMod != MAINTENANCE_MOD || !SD.isConnected())
     {
 
         if (file.size() >= (params.FILE_MAX_SIZE - 50)) {
@@ -139,14 +137,17 @@ void writeInFile()
     output->flush();
 
     output->print(luminosity == 101 ? "NA" : String(luminosity));
-    output->print(";");
-    output->print(temp == 0 ? "NA" : String(temp-41));
+
     output->print(";");
     output->print(humidity == 101 ? "NA" : String(humidity));
     output->print(";");
     output->print(pressure==299 ? "NA" : String(pressure));
     output->print(";");
-    output->print( (gpsTrame.substring(gpsTrame.length() -1) == "A") ? gpsTrame.substring(5) : "NA" );
+    output->print(temp == 0 ? "NA" : String(temp-41));
+    output->print(";");
+    output->print(gpsTrame);
+    /*output->print(";");
+    output->print(gpsTrame.substring(6,11));*/
     output->print("\n");
 
 

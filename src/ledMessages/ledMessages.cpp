@@ -49,8 +49,11 @@ void errorDataCaptorIllogical()
 
 void errorSDFull()
 {
-    int cycle = millis() % 1000;
-    led.setColorRGB(255, (cycle > 500) ? 255 : 0, (cycle > 500) ? 255 : 0);
+    while(!file && actualMod != MAINTENANCE_MOD)
+    {
+        int cycle = millis() % 1000;
+        led.setColorRGB(255, (cycle > 500) ? 255 : 0, (cycle > 500) ? 255 : 0);
+    }
 }
 
 void errorAccessOrWriteSD()

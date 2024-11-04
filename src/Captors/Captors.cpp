@@ -4,16 +4,17 @@
 
 void verifCaptors()
 {
-    if (errorCaptors.errorLum <= 1) // This captor is on an analogPin so it always send a data, we can't use the timeout for this
+    if (errorCaptors.errorLum <= 1)
     {
         timeoutCounter = millis();
-        luminosity = 1023;
-        while ((luminosity < params.LUMIN_LOW || luminosity > params.LUMIN_HIGH) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000){
-            luminosity = analogRead(LUMINOSITY_CAPTOR); // On prend le pourcentage de luminosité
+        do
+        {
+            luminosity = (analogRead(LUMINOSITY_CAPTOR)*100)/1023; // On prend le pourcentage de luminosité
         }
+        while ((analogRead(LUMINOSITY_CAPTOR) == 1023) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000);
 
-        luminosity = (luminosity < 0 || luminosity >= 1023) ? 101 : luminosity;
-        errorCaptors.errorLum = (luminosity < 0 || luminosity >= 1023) ? errorCaptors.errorLum + 1 : errorCaptors.errorLum;
+        luminosity = (analogRead(LUMINOSITY_CAPTOR) == 1023) ? 101: luminosity;
+        errorCaptors.errorLum = (analogRead(LUMINOSITY_CAPTOR) == 1023) ? errorCaptors.errorLum + 1 : errorCaptors.errorLum;
     }
 
     //Humidity
@@ -22,32 +23,28 @@ void verifCaptors()
         if (errorCaptors.errorHumidity <=1)
         {
             timeoutCounter = millis();
-            humidity=101;
-            while((humidity < params.HYGR_MINT || humidity > params.HYGR_MAXT) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000)
+            do
             {
                 humidity = bme280.getHumidity();
             }
-            if(humidity < params.HYGR_MINT || humidity > params.HYGR_MAXT)
-            {
-                humidity=101;
-                errorCaptors.errorHumidity++;
-            }
+            while((humidity < params.HYGR_MINT || humidity > params.HYGR_MAXT) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000);
+
+            humidity = (humidity < params.HYGR_MINT || humidity > params.HYGR_MAXT) ? 101 : humidity;
+            errorCaptors.errorHumidity = (humidity < params.HYGR_MINT || humidity > params.HYGR_MAXT) ? errorCaptors.errorHumidity + 1 : errorCaptors.errorHumidity;
         }
 
         //Pressure
         if (errorCaptors.errorPressure <=1)
         {
             timeoutCounter = millis();
-            pressure = 299;
-            while((pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000)
+            do
             {
                 pressure = bme280.getPressure()/100;
             }
-            if(pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX)
-            {
-                pressure = NAN;
-                errorCaptors.errorPressure++;
-            }
+            while((pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000);
+
+            pressure = (pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX) ? NAN : pressure;
+            errorCaptors.errorPressure = (pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX) ? errorCaptors.errorPressure + 1 : errorCaptors.errorPressure;
         }
 
 
@@ -55,11 +52,12 @@ void verifCaptors()
         if (errorCaptors.errorTemp <=1)
         {
             timeoutCounter = millis();
-            temp=0;
-            while ((temp < params.MIN_TEMP_AIR +41 || temp > params.MAX_TEMP_AIR +41) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000)
+            do
             {
                 temp = bme280.getTemperature() +41;
             }
+            while ((temp < params.MIN_TEMP_AIR +41 || temp > params.MAX_TEMP_AIR +41) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000);
+
             temp= (temp < params.MIN_TEMP_AIR +41 || temp > params.MAX_TEMP_AIR +41) ? 0 : temp;
             errorCaptors.errorTemp =  (temp < params.MIN_TEMP_AIR +41 || temp > params.MAX_TEMP_AIR +41) ?  errorCaptors.errorTemp +1 : errorCaptors.errorTemp;
         }
@@ -68,13 +66,38 @@ void verifCaptors()
 
 void getPosition()
 {
-    timeoutCounter = millis();
-    while (!gpsSerial.available()) {}
-    while (gpsSerial.available() && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000 )
-    {
-        gpsTrame = gpsSerial.readStringUntil('$');
-        if (gpsTrame.startsWith("GNGLL", 0) && !gpsTrame.startsWith("BDGSV", 0)) break;
-    }
-    errorCaptors.errorGPS = !(gpsTrame.startsWith("GNGLL", 0) && !gpsTrame.startsWith("BDGSV", 0)) ? errorCaptors.errorGPS + 1 : errorCaptors.errorGPS;
 
+    static bool goodTime;
+
+    if (actualMod != ECO_MOD || (goodTime = !goodTime))
+    {
+        if (gpsSerial.available() && errorCaptors.errorGPS <= 1)
+        {
+            char buffer[27];
+            timeoutCounter = millis();
+            while (gpsSerial.available() && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000)
+            {
+                char c = gpsSerial.read();
+                if (c == '$')
+                {
+                    for (byte i = 0; i <17; i++)
+                    {
+                        buffer[i] = gpsSerial.read();
+                    }
+
+                    if (buffer[2] == 'G' && buffer[3] == 'G' && buffer[4] == 'A')
+                    {
+                        for (byte i = 0; i <26; i++)
+                        {
+                            buffer[i] = gpsSerial.read();
+                        }
+                        gpsTrame = buffer;
+                        //gpsTrame = (gpsTrame.substring(11, 12) == "S" ? "-" : "" ) + gpsTrame.substring(0, 4) + gpsTrame.substring(6,7) + (gpsTrame.substring(25, 26) == "W" ? "-" : "") + gpsTrame.substring(13, 19);
+                        break;
+                    }
+                }
+            }
+        }
+        errorCaptors.errorGPS++;
+    }
 }

@@ -6,6 +6,7 @@
 #include <SoftwareSerial.h>
 
 #define LUMINOSITY_CAPTOR A0
+#define ECO_MOD 3
 
 extern ErrorCaptors errorCaptors;
 extern Parameters params;

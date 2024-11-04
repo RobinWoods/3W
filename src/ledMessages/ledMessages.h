@@ -5,6 +5,10 @@
 #ifndef LEDMESSAGES_H
 #define LEDMESSAGES_H
 
+#define MAINTENANCE_MOD 2
+#include <Arduino.h>
+#include <SD.h>
+
 void standardModLed();
 void configModLed();
 void ecoModLed();
@@ -16,5 +20,8 @@ void errorAccessCaptor();
 void errorDataCaptorIllogical();
 void errorSDFull();
 void errorAccessOrWriteSD();
+
+extern volatile byte actualMod;
+extern File file;
 
 #endif //LEDMESSAGES_H

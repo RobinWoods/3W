@@ -58,6 +58,7 @@ namespace SDLib {
 // Used by `getNextPathComponent`
 #define MAX_COMPONENT_LEN 12
 #define PATH_COMPONENT_BUFFER_LEN (MAX_COMPONENT_LEN + 1)
+#define CHIP_SELECT 4
 // BASENAME:char(8) + '.':char(1) + EXT:char(3) = 12 (a.k.a short 8.3 name)
 // And an extra space for '\0' for path buffer
 
@@ -358,9 +359,18 @@ namespace SDLib {
 
   uint8_t SDClass::isConnected()
   {
-    /*static bool hasBeenDisconnected;
-    if (hasBeenDisconnected) SD.begin();
-    if (card.isBusy()) hasBeenDisconnected = true;*/
+   /* static bool hasBeenDisconnected = false;
+
+    if (card.isBusy())
+    {
+        hasBeenDisconnected = true;
+    }
+    else if (hasBeenDisconnected)
+    {
+      SD.begin(CHIP_SELECT);
+      hasBeenDisconnected = false;
+    }*/
+
     return !card.isBusy();
   }
 

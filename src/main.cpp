@@ -66,10 +66,11 @@ void setup() {
     Serial.begin(9600);
     gpsSerial.begin(9600);
 
-    PORTD |= (1 << PD2); // Set pullUp resistance on pin 2 (PORTD, bit 2, at 1)
-    PORTD |= (1 << PD3); // Set pullUp resistance on pin 3 (PORTD, bit 3, at 1)
+    PORTD |= (1 << PD2); // Set pullUp resistance on pin 2
+    PORTD |= (1 << PD3); // Set pullUp resistance on pin 3
 
     pinMode(A0, INPUT_PULLUP);
+    //PORTC |= (1 << PC0); // Set pullUp resistance on pin A0
 
     cli(); // Stop interrupts
 
@@ -88,18 +89,14 @@ void setup() {
     bme280.init();
     rtc.begin();
 
-    EEPROM.get(1, params);
+    getEEPROMParams();
 
     if(digitalRead(3) == LOW)
     {
         actualMod = CONFIG_MOD;
         configMod();
     }
-    else
-    {
-        actualMod = STANDARD_MOD;
-    }
-    getEEPROMParams();
+    actualMod = STANDARD_MOD;
     createFile();
     flag= true;
 }
@@ -116,7 +113,7 @@ void loop() {
     {
         errorAccessCaptor();
     }
-    else if(!SD.isConnected() && actualMod != MAINTENANCE_MOD)
+    else if (!SD.isConnected() && actualMod != MAINTENANCE_MOD)
     {
         errorAccessOrWriteSD();
     }
@@ -142,13 +139,15 @@ void loop() {
     }
 
 
-
     if (flag)
     {
+        //Serial.println("Captors ...");
         verifCaptors();
+        //Serial.println("GPS ...");
         getPosition();
+        //Serial.println("Writing ...");
         writeInFile();
-        Serial.println("Done");
+        //Serial.println("Done");
         Serial.flush();
         overflowCounter = 0;
         flag = false;
@@ -163,7 +162,6 @@ ISR(TIMER2_OVF_vect) {
         secondCounter++;
         if (secondCounter >= 5)
         {
-            //actualMod = !GREEN_BUTTON_PIN ? (actualMod == STANDARD_MOD ? ECO_MOD : STANDARD_MOD) : ((actualMod == STANDARD_MOD || actualMod == ECO_MOD) ? MAINTENANCE_MOD : lastMod);
             if (digitalRead(GREEN_BUTTON_PIN) == LOW)
             {
                 if (actualMod == STANDARD_MOD)
@@ -180,7 +178,7 @@ ISR(TIMER2_OVF_vect) {
                 if (actualMod == STANDARD_MOD || actualMod == ECO_MOD)
                 {
                     lastMod = actualMod;
-                    file.close();
+                    //file.close();
                     SD.end();
                     actualMod = MAINTENANCE_MOD;
                 }
@@ -213,7 +211,7 @@ ISR(TIMER1_OVF_vect) {
         EEPROM.put(sizeof(Parameters) + 1 , params); // On écrit une seule fois dans l'EEPROM
         actualMod = STANDARD_MOD;
     }
-    else if (overflowCounter >= 15 /*15  *(actualMod == ECO_MOD ? 2* params.LOG_INTERVALL : params.LOG_INTERVALL)*/) // On attends x min ou x *2 min pour le mode eco
+    else if (overflowCounter >= 15 *(actualMod == ECO_MOD ? 2* params.LOG_INTERVALL : params.LOG_INTERVALL)) // On attends x min ou x *2 min pour le mode eco
     {
         flag = true;
     }
@@ -239,127 +237,47 @@ void configMod()
 
         Serial.println(input);
 
-        if (paramName.equals("LUMIN"))
-        {
-            Serial.println(value);
-            Serial.println(value == 0);
-            if (value == 0 || value == 1) {
-                params.LUMIN = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("LUMIN_LOW"))
-        {
-            if (value >= 0 && value <= 1023) {
-                params.LUMIN_LOW = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("LUMIN_HIGH"))
-        {
-            if (value >= 0 && value <= 1023) {
-                params.LUMIN_HIGH = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("TEMP_AIR"))
-        {
-            if (value == 0 || value == 1) {
-                params.TEMP_AIR = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("MIN_TEMP_AIR"))
-        {
-            if (value >= -40 && value <= 85) {
-                params.MIN_TEMP_AIR = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("MAX_TEMP_AIR"))
-        {
-            if (value >= -40 && value <= 85) {
-                params.MAX_TEMP_AIR = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("HYGR"))
-        {
-            if (value == 0 || value == 1) {
-                params.HYGR = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("HYGR_MINT"))
-        {
-            if (value >= -40 && value <= 85) {
-                params.HYGR_MINT = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("HYGR_MAXT"))
-        {
-            if (value >= -40 && value <= 85) {
-                params.HYGR_MAXT = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("PRESSURE"))
-        {
-            if (value == 0 || value == 1) {
-                params.PRESSURE = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("PRESSURE_MIN"))
-        {
-            if (value >= 300 && value <= 1100) {
-                params.PRESSURE_MIN = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("PRESSURE_MAX"))
-        {
-            if (value >= 300 && value <= 1100) {
-                params.PRESSURE_MAX = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("LOG_INTERVALL"))
-        {
-            if (value >= 1 && value <= 255)
-            {
-                params.LOG_INTERVALL = value;
-            }
-            overflowCounter = 0;
-        }
-        else if (paramName.equals("FILE_MAX_SIZE"))
-        {
-            if (value >= 1024 && value <= 8192)
-            {
-                params.FILE_MAX_SIZE = value;
-            }
-            overflowCounter = 0;
-        }
+        if (paramName.equals("LUMIN") && (value == 0 || value == 1)) params.LUMIN = value;
+
+        else if (paramName.equals("LUMIN_LOW") && (value >= 0 && value <= 1023)) params.LUMIN_LOW = value;
+
+        else if (paramName.equals("LUMIN_HIGH") && (value >= 0 && value <= 1023)) params.LUMIN_HIGH = value;
+
+        else if (paramName.equals("TEMP_AIR") && (value == 0 || value == 1)) params.TEMP_AIR = value;
+
+        else if (paramName.equals("MIN_TEMP_AIR") && (value >= -40 && value <= 85)) params.MIN_TEMP_AIR = value;
+
+        else if (paramName.equals("MAX_TEMP_AIR") && (value >= -40 && value <= 85)) params.MAX_TEMP_AIR = value;
+
+        else if (paramName.equals("HYGR") && (value == 0 || value == 1)) params.HYGR = value;
+
+        else if (paramName.equals("HYGR_MINT") && (value >= -40 && value <= 85)) params.HYGR_MINT = value;
+
+        else if (paramName.equals("HYGR_MAXT") && (value >= -40 && value <= 85)) params.HYGR_MAXT = value;
+
+        else if (paramName.equals("PRESSURE") && (value == 0 || value == 1)) params.PRESSURE = value;
+
+        else if (paramName.equals("PRESSURE_MIN") && (value >= 300 && value <= 1100)) params.PRESSURE_MIN = value;
+
+        else if (paramName.equals("PRESSURE_MAX") && (value >= 300 && value <= 1100)) params.PRESSURE_MAX = value;
+
+        else if (paramName.equals("LOG_INTERVALL") && (value >= 1 && value <= 255)) params.LOG_INTERVALL = value;
+
+        else if (paramName.equals("FILE_MAX_SIZE") && (value >= 1024 && value <= 8192)) params.FILE_MAX_SIZE = value;
+
         else if (paramName.equals("RESET"))
         {
             EEPROM.get(1, params);
-            overflowCounter = 0;
+            EEPROM.write(0, MAGIC_WORD_DEFAULT);
         }
         else if (paramName.equals("VERSION"))
         {
             Serial.print(F("Version : "));
             Serial.println(VERSION);
-            overflowCounter = 0;
         }
-        else if (paramName.equals("TIMEOUT"))
-        {
-            if (value >= 30 && value <= 120)
-            {
-                params.TIMEOUT = value;
-            }
-        }
-        /*else if (paramName.equals("CLOCK") || paramName.equals("DATE") || paramName.equals("DAY"))
+        else if (paramName.equals("TIMEOUT")) params.TIMEOUT = (value >= 30 && value <= 120) ? value : params.TIMEOUT;
+
+        else if (paramName.equals("CLOCK") || paramName.equals("DATE") || paramName.equals("DAY"))
         {
             String stringValue = input.substring(input.indexOf('=') + 1);
 
@@ -386,10 +304,9 @@ void configMod()
             {
             }
 
-        }*/
+        }
         else if (paramName.equals("EXIT"))
         {
-            actualMod = STANDARD_MOD;
             Serial.flush();
             EEPROM.put(sizeof(Parameters) +1, params);
             break;
@@ -397,17 +314,14 @@ void configMod()
         else
         {
             Serial.println(F("Unrecognised Command"));
-            overflowCounter = 0;
         }
         Serial.flush();
         EEPROM.write(0, 213);
+        overflowCounter = 0;
     }
 }
 
 void getEEPROMParams()
 {
-    if (EEPROM.read(0) == MAGIC_WORD_ACTUAL)
-    {
-        EEPROM.get(25, params);
-    }
+    EEPROM.get((EEPROM.read(0) == MAGIC_WORD_DEFAULT) ? 1 : 25, params);
 }
