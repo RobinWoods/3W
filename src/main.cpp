@@ -1,3 +1,4 @@
+// Import des librairies
 #include <Arduino.h>
 #include <RTClib.h>
 #include <SD.h>
@@ -5,14 +6,17 @@
 #include <SoftwareSerial.h>
 #include <EEPROM.h>
 
+//Imports des fichiers pour les structures utilisées et les fonctions relatives à la carte SD, aux leds et capteurs
 #include "Parameters.h"
-
 #include "SDUtils/SDUtils.h"
-extern File file;
-extern char fileName[13];
 #include "ledMessages/ledMessages.h"
 #include "Captors/Captors.h"
 
+//Déclaration de variables global d'un autre fichier pour résoudre le nom des variables pendant l'édition des liens
+extern File file;
+extern char fileName[13];
+
+//Création de MACRO pour une meilleure lisibilité, on utilise des bytes pour par exemple définir le mode actuel
 #define RED_BUTTON_PIN 3
 #define GREEN_BUTTON_PIN 2
 #define LUMINOSITY_CAPTOR A0
@@ -21,31 +25,39 @@ extern char fileName[13];
 #define CONFIG_MOD 1
 #define MAINTENANCE_MOD 2
 #define ECO_MOD 3
+
+// Clés pour identifier les paramètres stockés dans l'EEPROM
 #define MAGIC_WORD_DEFAULT 123
 #define MAGIC_WORD_ACTUAL 213
 
 #define TIME_FOR_STOP_CONFIG_MOD 1800000
 #define VERSION 00001
 
+//Déclaration des objets relatifs à l'horloge, le gps et les capteurs pour pouvoir utiliser leurs méthodes
+
 RTC_DS1307 rtc;
 SoftwareSerial gpsSerial(5,6);
 BME280 bme280;
 
-volatile byte actualMod;
+
+// Déclaration des variables globales pour gérer les modes et compteurs
+volatile byte actualMod; //variable
 volatile byte lastMod;
 volatile byte varCompteur = 0;
 volatile byte secondCounter = 0;
 uint16_t overflowCounter;
 bool flag = false;
 
+//Prototypes de fonctions pour pouvoir les définir après les appels
 void configMod();
-
 void getEEPROMParams();
 
+// Déclarations des variables globales pour les capteurs et le compteur de timeout
 byte luminosity, humidity, temp;
 float pressure;
 unsigned long timeoutCounter;
 
+//Structures pour les paramètres et les erreurs
 Parameters params;
 ErrorCaptors errorCaptors;
 
@@ -54,26 +66,25 @@ void changeMod()
 {
     cli();
     TIMSK2 = 0b00000001;      // Autoriser l'interruption locale du timer
-    bitClear (TCCR2A, WGM20); // WGM20 = 0
-    bitClear (TCCR2A, WGM21); // WGM21 = 0
+    bitClear (TCCR2A, WGM20); // Réglage du mode du timer
+    bitClear (TCCR2A, WGM21); // Réglage du mode du timer
     sei();
+    //Compteur à 0
     varCompteur = 0;
     secondCounter = 0;
 }
 
 void setup() {
-    Serial.begin(9600);
-    gpsSerial.begin(9600);
+    Serial.begin(9600); //Démarrage de la Com Série
+    gpsSerial.begin(9600); // Démarrage de la Com Série virtuelle pour le GPS
 
-    PORTD |= (1 << PD2); // Set pullUp resistance on pin 2
-    PORTD |= (1 << PD3); // Set pullUp resistance on pin 3
-
-    pinMode(A0, INPUT_PULLUP);
-    //PORTC |= (1 << PC0); // Set pullUp resistance on pin A0
+    PORTD |= (1 << PD2); // Résistance pull-up sur la broche 2
+    PORTD |= (1 << PD3); // Résistance pull-up sur la broche 3
+    PORTC |= (1 << PC0); // Résistance pull-up sur la broche A0
 
     cli(); // Stop interrupts
 
-    TCCR2B = 0b00000110; // Clock / 256 soit 16 micro-s et WGM22 = 0
+    TCCR2B = 0b00000110; // Configurer le timer avec une horloge de 256
 
     TCCR1A = 0;              // Mode normal
     TCCR1B = (1 << CS12) | (1 << CS10); // Prescaler de 1024
@@ -82,28 +93,30 @@ void setup() {
 
     sei(); // Restart Interrupts
 
+    //Déclaration des interruptions externes sur les boutons
     attachInterrupt(digitalPinToInterrupt(2), changeMod, FALLING);
     attachInterrupt(digitalPinToInterrupt(3), changeMod, FALLING);
 
+    //Initialisation des capteurs et de l'horloge
     bme280.init();
     rtc.begin();
 
-    getEEPROMParams();
+    getEEPROMParams(); // Récupération des paramètres dans l'EEPROM
 
-    if(digitalRead(3) == LOW)
+    if(digitalRead(3) == LOW) // Si le bouton rouge est préssé au démarrage on lance le mode configuration
     {
         actualMod = CONFIG_MOD;
         configMod();
     }
-    actualMod = STANDARD_MOD;
-    createFile();
-    flag= true;
+    actualMod = STANDARD_MOD; //On lance le mode standard soit après la fin du mode config ou au démarrage
+    createFile(); // On créer le premier fichier pour enregistrer les données
+    flag= true; // On lance un enregistrement au démarrage
 }
 
 
 
 void loop() {
-
+    //On vérifie les erreurs et les accès pour les capteurs puis si tout est bon on affiche la couleur correspondant au mode actuel
     if (errorCaptors.errorLum >= 2 || errorCaptors.errorHumidity >= 2 || errorCaptors.errorPressure >= 2 || errorCaptors.errorTemp >= 2)
     {
         errorDataCaptorIllogical();
@@ -140,27 +153,27 @@ void loop() {
 
     if (flag)
     {
-        //Serial.println("Captors ...");
-        verifCaptors();
-        //Serial.println("GPS ...");
-        getPosition();
-        //Serial.println("Writing ...");
-        writeInFile();
+        verifCaptors(); // On récupère les valeurs des capteurs
+        //Serial.println("GPS");
+        getPosition(); // On récupère la position
+        //Serial.println("Writing");
+        writeInFile(); // On écrit
         //Serial.println("Done");
         Serial.flush();
-        overflowCounter = 0;
+        overflowCounter = 0; // On remet le timer et le flag à 0
         flag = false;
     }
 }
 
 ISR(TIMER2_OVF_vect) {
     TCNT2 = 256 - 250; // 250 x 16 µS = 4 ms
-    if (varCompteur++ > 250)
+    if (varCompteur++ > 250) // On regarde si une seconde s'est écoulée (4ms * 250 = 1s)
     {
-        varCompteur = 0;
-        secondCounter++;
+        varCompteur = 0; // On remet le compteur à 0
+        secondCounter++; // On incrémente le compteur de secondes
         if (secondCounter >= 5)
         {
+            //Si un des boutons est toujours appuyé après les 5s alors on change la variable du mode actuel
             if (digitalRead(GREEN_BUTTON_PIN) == LOW)
             {
                 if (actualMod == STANDARD_MOD || actualMod == MAINTENANCE_MOD)
@@ -177,8 +190,7 @@ ISR(TIMER2_OVF_vect) {
                 if (actualMod == STANDARD_MOD || actualMod == ECO_MOD)
                 {
                     lastMod = actualMod;
-                    //file.close();
-                    SD.end();
+                    SD.end(); // On ferme la carte SD au lancement du mode config
                     actualMod = MAINTENANCE_MOD;
                 }
                 else if (actualMod == MAINTENANCE_MOD)
@@ -191,12 +203,12 @@ ISR(TIMER2_OVF_vect) {
                     {
                         actualMod = ECO_MOD;
                     }
-                    SD.begin(CHIP_SELECT);
+                    SD.begin(CHIP_SELECT); // On ré-ouvre la SD quand on sort du mode config
                     file = SD.open(fileName, FILE_WRITE);
                 }
             }
             cli();
-            TIMSK2 = 0b00000000;
+            TIMSK2 = 0b00000000; // On désactive les interruptions
             sei();
             secondCounter=0;
         }
@@ -210,13 +222,13 @@ ISR(TIMER1_OVF_vect) {
         EEPROM.put(sizeof(Parameters) + 1 , params); // On écrit une seule fois dans l'EEPROM
         actualMod = STANDARD_MOD;
     }
-    else if (overflowCounter >= 15 *(actualMod == ECO_MOD ? 2* params.LOG_INTERVALL : params.LOG_INTERVALL)) // On attends x min ou x *2 min pour le mode eco
+    else if (overflowCounter >= 4 /*(actualMod == ECO_MOD ? 2* params.LOG_INTERVALL : params.LOG_INTERVALL)*/) // On attends x min ou x * 2 min pour le mode eco
     {
-        flag = true;
+        flag = true; //Toutes les x mins on lève le flag ce qui lancera une séquence de mesures dans la boucle loop()
     }
 }
 
-
+// Mode configuration pour ajuster les paramètres
 void configMod()
 {
     configModLed();
@@ -228,7 +240,8 @@ void configMod()
 
     while (1)
     {
-        EEPROM.write(0, MAGIC_WORD_ACTUAL);
+        EEPROM.write(0, MAGIC_WORD_ACTUAL);// Indiquer que les paramètres sont modifiés
+        while (!Serial.available()){}
         while (!Serial.available()){}
         String input = Serial.readStringUntil('\n');
         String paramName = input.substring(0, input.indexOf('='));
@@ -236,6 +249,7 @@ void configMod()
 
         Serial.println(input);
 
+        // Affectation des paramètres selon la commande reçue si les valeurs sont cohérentes
         if (paramName.equals("LUMIN") && (value == 0 || value == 1)) params.LUMIN = value;
 
         else if (paramName.equals("LUMIN_LOW") && (value >= 0 && value <= 1023)) params.LUMIN_LOW = value;
@@ -266,7 +280,7 @@ void configMod()
 
         else if (paramName.equals("RESET"))
         {
-            EEPROM.get(1, params);
+            EEPROM.get(1, params);//On recharge les paramètres par defaut
             EEPROM.write(0, MAGIC_WORD_DEFAULT);
         }
         else if (paramName.equals("VERSION"))
@@ -299,28 +313,23 @@ void configMod()
                 rtc.adjust(DateTime(year, month, day, rtc.now().hour(), rtc.now().minute(), rtc.now().second()));
 
             }
-            else if (paramName.equals("DAY"))
-            {
-            }
-
         }
         else if (paramName.equals("EXIT"))
         {
             Serial.flush();
-            EEPROM.put(sizeof(Parameters) +1, params);
-            break;
+            EEPROM.put(sizeof(Parameters) +1, params);//On écrit les paramètres modifiées dans l'EEPROM
+            break; // On sort du mode
         }
         else
         {
             Serial.println(F("Unrecognised Command"));
         }
         Serial.flush();
-        EEPROM.write(0, 213);
         overflowCounter = 0;
     }
 }
 
 void getEEPROMParams()
 {
-    EEPROM.get((EEPROM.read(0) == MAGIC_WORD_DEFAULT) ? 1 : 25, params);
+    EEPROM.get((EEPROM.read(0) == MAGIC_WORD_DEFAULT) ? 1 : 25, params); // En fonction de la valeur de la clé, on charge les paramètres par défault ou ceux modifié
 }

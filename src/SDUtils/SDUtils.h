@@ -2,9 +2,6 @@
 #define SDUTILS_H
 #include "Parameters.h"
 
-
-
-
 #define CHIP_SELECT 4
 #define MAINTENANCE_MOD 2
 

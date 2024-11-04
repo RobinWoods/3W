@@ -65,7 +65,7 @@ void createFile()
     file = SD.open(fileName, FILE_WRITE); // ouvre le fichier
     if (!(file)) errorSDFull(); // renvoie une erreur si le fichier ne s'ouvre pas avec code LED carte SD pleine (car c'est probablement la raison pour laquelle ça s'ouvrira pas)
 
-    file.print(F("date;lumin;hygr;pressure;temp;position\n")); //écrit l'en-tête
+    file.print(F("date;lumin;hygr;pressure;temp;lat;lng\n")); //écrit l'en-tête
     file.flush();
 }
 void getDateAndTime(char *tab)
@@ -110,34 +110,32 @@ void writeInFile()
     /*
     Écrit dans le fichier ouvert la date et les données des capteurs
     */
-    Print* output;
-    if (actualMod != MAINTENANCE_MOD || !SD.isConnected())
+    Print* output; // On créer une variable pointeur de type Print pour pouvoir écrire dans le Serial ou la carte SD avec le même code
+    if (actualMod != MAINTENANCE_MOD || !SD.isConnected()) // On regarde si l'on doit et peut écire dans la carte
     {
-
         if (file.size() >= (params.FILE_MAX_SIZE - 50)) {
             file.close();
             createFile();
             file = SD.open(fileName, FILE_WRITE); // ouvre le fichier
         }
-        output = &file;
+        output = &file; //On défini la variable comme le fichier ouvert
     }
     else
     {
         Serial.println("Maintenance Mod");
-        output = &Serial;
+        output = &Serial; //On défini la variable comme le Serial
     }
 
 
     // écrit la date et l'heure
-    char buffer[20]={'\0'};
-    getDateAndTime(buffer);
+    char buffer[17]={'\0'};
+    getDateAndTime(buffer); // On récupère la date avec l'horloge RTC
     output->print(buffer);
     output->print(";");
 
     output->flush();
 
-    output->print(luminosity == 101 ? "NA" : String(luminosity));
-
+    output->print(luminosity == 101 ? "NA" : String(luminosity));  //Si les capteurs sont dans leurs valeurs spéciale alors on écrit NA
     output->print(";");
     output->print(humidity == 101 ? "NA" : String(humidity));
     output->print(";");
@@ -146,8 +144,7 @@ void writeInFile()
     output->print(temp == 0 ? "NA" : String(temp-41));
     output->print(";");
     output->print(bufferGPS);
-    /*output->print(";");
-    output->print(gpsTrame.substring(6,11));*/
+
     output->print("\n");
 
 
