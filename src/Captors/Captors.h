@@ -19,7 +19,7 @@ extern volatile byte actualMod;
 
 extern byte luminosity, humidity, temp;
 extern float pressure;
-extern String gpsTrame;
+
 
 extern unsigned long timeoutCounter;
 

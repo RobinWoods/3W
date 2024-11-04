@@ -15,7 +15,7 @@ extern Parameters params;
 
 extern byte luminosity, humidity, temp;
 extern float pressure;
-extern String gpsTrame;
+extern char bufferGPS[27];
 
 void writeInFile();
 void createFile();

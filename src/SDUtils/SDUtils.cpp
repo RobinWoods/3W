@@ -145,7 +145,7 @@ void writeInFile()
     output->print(";");
     output->print(temp == 0 ? "NA" : String(temp-41));
     output->print(";");
-    output->print(gpsTrame);
+    output->print(bufferGPS);
     /*output->print(";");
     output->print(gpsTrame.substring(6,11));*/
     output->print("\n");

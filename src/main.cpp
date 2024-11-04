@@ -44,7 +44,6 @@ void getEEPROMParams();
 
 byte luminosity, humidity, temp;
 float pressure;
-String gpsTrame = "";
 unsigned long timeoutCounter;
 
 Parameters params;
@@ -164,7 +163,7 @@ ISR(TIMER2_OVF_vect) {
         {
             if (digitalRead(GREEN_BUTTON_PIN) == LOW)
             {
-                if (actualMod == STANDARD_MOD)
+                if (actualMod == STANDARD_MOD || actualMod == MAINTENANCE_MOD)
                 {
                     actualMod = ECO_MOD;
                 }

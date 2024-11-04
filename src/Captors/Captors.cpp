@@ -1,10 +1,10 @@
 #include "Captors.h"
 
 #include <EEPROM.h>
-
+char bufferGPS[27];
 void verifCaptors()
 {
-    if (errorCaptors.errorLum <= 1)
+    if (errorCaptors.errorLum <= 1 && params.LUMIN)
     {
         timeoutCounter = millis();
         do
@@ -20,7 +20,7 @@ void verifCaptors()
     //Humidity
     if (bme280.isConnected())
     {
-        if (errorCaptors.errorHumidity <=1)
+        if (errorCaptors.errorHumidity <=1 && params.HYGR)
         {
             timeoutCounter = millis();
             do
@@ -34,7 +34,7 @@ void verifCaptors()
         }
 
         //Pressure
-        if (errorCaptors.errorPressure <=1)
+        if (errorCaptors.errorPressure <=1 && params.PRESSURE)
         {
             timeoutCounter = millis();
             do
@@ -49,7 +49,7 @@ void verifCaptors()
 
 
         //Temperature
-        if (errorCaptors.errorTemp <=1)
+        if (errorCaptors.errorTemp <=1 && params.TEMP_AIR)
         {
             timeoutCounter = millis();
             do
@@ -73,8 +73,8 @@ void getPosition()
     {
         if (gpsSerial.available() && errorCaptors.errorGPS <= 1)
         {
-            char buffer[27];
             timeoutCounter = millis();
+            memset(bufferGPS, '\0', 27);
             while (gpsSerial.available() && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000)
             {
                 char c = gpsSerial.read();
@@ -82,16 +82,15 @@ void getPosition()
                 {
                     for (byte i = 0; i <17; i++)
                     {
-                        buffer[i] = gpsSerial.read();
+                        bufferGPS[i] = gpsSerial.read();
                     }
 
-                    if (buffer[2] == 'G' && buffer[3] == 'G' && buffer[4] == 'A')
+                    if (bufferGPS[2] == 'G' && bufferGPS[3] == 'G' && bufferGPS[4] == 'A')
                     {
                         for (byte i = 0; i <26; i++)
                         {
-                            buffer[i] = gpsSerial.read();
+                            bufferGPS[i] = gpsSerial.read();
                         }
-                        gpsTrame = buffer;
                         //gpsTrame = (gpsTrame.substring(11, 12) == "S" ? "-" : "" ) + gpsTrame.substring(0, 4) + gpsTrame.substring(6,7) + (gpsTrame.substring(25, 26) == "W" ? "-" : "") + gpsTrame.substring(13, 19);
                         break;
                     }
