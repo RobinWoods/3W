@@ -65,7 +65,7 @@ void createFile()
     file = SD.open(fileName, FILE_WRITE); // ouvre le fichier
     if (!(file)) errorSDFull(); // renvoie une erreur si le fichier ne s'ouvre pas avec code LED carte SD pleine (car c'est probablement la raison pour laquelle ça s'ouvrira pas)
 
-    file.print(F("date;lumin;hygr;pressure;temp;position\n")); //écrit l'en-tête
+    file.print(F("date;lumin;hygr;pressure;temp;lat;lng\n")); //écrit l'en-tête
     file.flush();
 }
 void getDateAndTime(char *tab)
@@ -128,7 +128,7 @@ void writeInFile()
 
 
     // écrit la date et l'heure
-    char buffer[20]={'\0'};
+    char buffer[17]={'\0'};
     getDateAndTime(buffer); // On récupère la date avec l'horloge RTC
     output->print(buffer);
     output->print(";");
@@ -143,9 +143,9 @@ void writeInFile()
     output->print(";");
     output->print(temp == 0 ? "NA" : String(temp-41));
     output->print(";");
-    output->print(gpsTrame);
-    /*output->print(";");
-    output->print(gpsTrame.substring(6,11));*/
+    output->print(bufferLat);
+    output->print(";");
+    output->print(bufferLng);
     output->print("\n");
 
 

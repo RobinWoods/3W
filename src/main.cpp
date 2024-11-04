@@ -55,7 +55,6 @@ void getEEPROMParams();
 // Déclarations des variables globales pour les capteurs et le compteur de timeout
 byte luminosity, humidity, temp;
 float pressure;
-String gpsTrame = "";
 unsigned long timeoutCounter;
 
 //Structures pour les paramètres et les erreurs
@@ -155,8 +154,11 @@ void loop() {
     if (flag)
     {
         verifCaptors(); // On récupère les valeurs des capteurs
+        //Serial.println("GPS");
         getPosition(); // On récupère la position
+        //Serial.println("Writing");
         writeInFile(); // On écrit
+        //Serial.println("Done");
         Serial.flush();
         overflowCounter = 0; // On remet le timer et le flag à 0
         flag = false;
@@ -220,7 +222,7 @@ ISR(TIMER1_OVF_vect) {
         EEPROM.put(sizeof(Parameters) + 1 , params); // On écrit une seule fois dans l'EEPROM
         actualMod = STANDARD_MOD;
     }
-    else if (overflowCounter >= 15 *(actualMod == ECO_MOD ? 2* params.LOG_INTERVALL : params.LOG_INTERVALL)) // On attends x min ou x * 2 min pour le mode eco
+    else if (overflowCounter >= 4 /*(actualMod == ECO_MOD ? 2* params.LOG_INTERVALL : params.LOG_INTERVALL)*/) // On attends x min ou x * 2 min pour le mode eco
     {
         flag = true; //Toutes les x mins on lève le flag ce qui lancera une séquence de mesures dans la boucle loop()
     }

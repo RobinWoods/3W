@@ -1,13 +1,15 @@
 #include "Captors.h"
-
 #include <EEPROM.h>
+
+char bufferLat[6];
+char bufferLng[7];
 
 void verifCaptors()
 {
 
-    // On vérifie chaque capteurs de la même façon
+    // On vérifie chaque capteur de la même façon
 
-    if (errorCaptors.errorLum <= 1) // On vérifie que le capteur n'est pas considéré en défault
+    if (errorCaptors.errorLum <= 1 && params.LUMIN) // On vérifie que le capteur n'est pas considéré en défault
     {
         timeoutCounter = millis(); // On initialise l'instant t de lancement de la lecture du capteur
         do // On fait tourner au moins une fois la lecture
@@ -23,7 +25,7 @@ void verifCaptors()
     //Humidity
     if (bme280.isConnected()) // On vérifie que le capteur est branché pour prévenir des bugs
     {
-        if (errorCaptors.errorHumidity <=1)
+        if (errorCaptors.errorHumidity <=1 && params.HYGR)
         {
             timeoutCounter = millis();
             do
@@ -37,7 +39,7 @@ void verifCaptors()
         }
 
         //Pressure
-        if (errorCaptors.errorPressure <=1)
+        if (errorCaptors.errorPressure <=1 && params.PRESSURE)
         {
             timeoutCounter = millis();
             do
@@ -45,14 +47,13 @@ void verifCaptors()
                 pressure = bme280.getPressure()/100;
             }
             while((pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX) && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000);
-
             pressure = (pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX) ? NAN : pressure;
             errorCaptors.errorPressure = (pressure < params.PRESSURE_MIN || pressure > params.PRESSURE_MAX) ? errorCaptors.errorPressure + 1 : errorCaptors.errorPressure;
         }
 
 
         //Temperature
-        if (errorCaptors.errorTemp <=1)
+        if (errorCaptors.errorTemp <=1 && params.TEMP_AIR)
         {
             timeoutCounter = millis();
             do
@@ -76,14 +77,14 @@ void getPosition()
     {
         if (gpsSerial.available() && errorCaptors.errorGPS <= 1) // On vérifie qu'on a accès au capteur et qu'il n'est pas en défaut
         {
-            char buffer[27]; // On créer un buffer pour la trame
             timeoutCounter = millis();
             while (gpsSerial.available() && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000)
             {
                 char c = gpsSerial.read(); // on lit ce qu'envoi le GPS
                 if (c == '$') //Si c'est le début d'une trame NMEA alors on regarde laquelle en écrivant dans le buffer le début de la trame
                 {
-                    for (byte i = 0; i <17; i++)
+
+                    /*for (byte i = 0; i <17; i++)
                     {
                         buffer[i] = gpsSerial.read();
                     }
@@ -97,6 +98,43 @@ void getPosition()
                         gpsTrame = buffer; //On écrit la valeur du buffer dans une string
                         //gpsTrame = (gpsTrame.substring(11, 12) == "S" ? "-" : "" ) + gpsTrame.substring(0, 4) + gpsTrame.substring(6,7) + (gpsTrame.substring(25, 26) == "W" ? "-" : "") + gpsTrame.substring(13, 19);
                         break;//On sort de la boucle
+                    }*/
+                    for (byte i = 0; i <5; i++)
+                    {
+                        bufferLat[i] = gpsSerial.read();
+                    }
+                    for (byte i = 0; i <12; i++)
+                    {
+                        gpsSerial.read();
+                    }
+
+                    if (bufferLat[2] == 'G' && bufferLat[3] == 'G' && bufferLat[4] == 'A') // On vérifie que c'est bien la trame GNGGA
+                    {
+                        memset(bufferLat, '\0', 11);
+                        for (byte i = 0; i< 4; i++)
+                        {
+                            bufferLat[i] = gpsSerial.read();
+                        }
+
+                        gpsSerial.read();
+
+                        bufferLat[4] = gpsSerial.read();
+
+
+                        for (byte i = 0; i<7; i++)
+                        {
+                            gpsSerial.read();
+                        }
+
+                        for (byte i = 0; i< 5; i++)
+                        {
+                            bufferLng[i] = gpsSerial.read();
+                        }
+
+                        gpsSerial.read();
+
+                        bufferLng[5] = gpsSerial.read();
+                        break;
                     }
                 }
             }
