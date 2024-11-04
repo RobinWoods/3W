@@ -110,34 +110,32 @@ void writeInFile()
     /*
     Écrit dans le fichier ouvert la date et les données des capteurs
     */
-    Print* output;
-    if (actualMod != MAINTENANCE_MOD || !SD.isConnected())
+    Print* output; // On créer une variable pointeur de type Print pour pouvoir écrire dans le Serial ou la carte SD avec le même code
+    if (actualMod != MAINTENANCE_MOD || !SD.isConnected()) // On regarde si l'on doit et peut écire dans la carte
     {
-
         if (file.size() >= (params.FILE_MAX_SIZE - 50)) {
             file.close();
             createFile();
             file = SD.open(fileName, FILE_WRITE); // ouvre le fichier
         }
-        output = &file;
+        output = &file; //On défini la variable comme le fichier ouvert
     }
     else
     {
         Serial.println("Maintenance Mod");
-        output = &Serial;
+        output = &Serial; //On défini la variable comme le Serial
     }
 
 
     // écrit la date et l'heure
     char buffer[20]={'\0'};
-    getDateAndTime(buffer);
+    getDateAndTime(buffer); // On récupère la date avec l'horloge RTC
     output->print(buffer);
     output->print(";");
 
     output->flush();
 
-    output->print(luminosity == 101 ? "NA" : String(luminosity));
-
+    output->print(luminosity == 101 ? "NA" : String(luminosity));  //Si les capteurs sont dans leurs valeurs spéciale alors on écrit NA
     output->print(";");
     output->print(humidity == 101 ? "NA" : String(humidity));
     output->print(";");
