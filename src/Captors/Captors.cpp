@@ -1,15 +1,11 @@
 #include "Captors.h"
 #include <EEPROM.h>
 
-char bufferLat[6];
-char bufferLng[7];
-
+char bufferGPS[27];
 void verifCaptors()
 {
-
-    // On vérifie chaque capteur de la même façon
-
-    if (errorCaptors.errorLum <= 1 && params.LUMIN) // On vérifie que le capteur n'est pas considéré en défault
+  // On vérifie chaque capteur de la même façon
+    if (errorCaptors.errorLum <= 1 && params.LUMIN)// On vérifie que le capteur n'est pas considéré en défault
     {
         timeoutCounter = millis(); // On initialise l'instant t de lancement de la lecture du capteur
         do // On fait tourner au moins une fois la lecture
@@ -78,64 +74,25 @@ void getPosition()
         if (gpsSerial.available() && errorCaptors.errorGPS <= 1) // On vérifie qu'on a accès au capteur et qu'il n'est pas en défaut
         {
             timeoutCounter = millis();
+            memset(bufferGPS, '\0', 27);
             while (gpsSerial.available() && millis() - timeoutCounter <= (long)params.TIMEOUT * 1000)
             {
                 char c = gpsSerial.read(); // on lit ce qu'envoi le GPS
                 if (c == '$') //Si c'est le début d'une trame NMEA alors on regarde laquelle en écrivant dans le buffer le début de la trame
                 {
 
-                    /*for (byte i = 0; i <17; i++)
+                    for (byte i = 0; i <17; i++)
                     {
-                        buffer[i] = gpsSerial.read();
+                        bufferGPS[i] = gpsSerial.read(); // On écrit les premières valeurs de la trame
                     }
 
-                    if (buffer[2] == 'G' && buffer[3] == 'G' && buffer[4] == 'A') // On vérifie que c'est bien la trame GNGGA
+                    if (bufferGPS[2] == 'G' && bufferGPS[3] == 'G' && bufferGPS[4] == 'A')
                     {
                         for (byte i = 0; i <26; i++)
                         {
-                            buffer[i] = gpsSerial.read(); // On réecris dans le buffer les informations de positions
+                            bufferGPS[i] = gpsSerial.read(); // On réécris les valeurs dans le buffer pour avoir uniquement la position 
                         }
-                        gpsTrame = buffer; //On écrit la valeur du buffer dans une string
-                        //gpsTrame = (gpsTrame.substring(11, 12) == "S" ? "-" : "" ) + gpsTrame.substring(0, 4) + gpsTrame.substring(6,7) + (gpsTrame.substring(25, 26) == "W" ? "-" : "") + gpsTrame.substring(13, 19);
-                        break;//On sort de la boucle
-                    }*/
-                    for (byte i = 0; i <5; i++)
-                    {
-                        bufferLat[i] = gpsSerial.read();
-                    }
-                    for (byte i = 0; i <12; i++)
-                    {
-                        gpsSerial.read();
-                    }
-
-                    if (bufferLat[2] == 'G' && bufferLat[3] == 'G' && bufferLat[4] == 'A') // On vérifie que c'est bien la trame GNGGA
-                    {
-                        memset(bufferLat, '\0', 11);
-                        for (byte i = 0; i< 4; i++)
-                        {
-                            bufferLat[i] = gpsSerial.read();
-                        }
-
-                        gpsSerial.read();
-
-                        bufferLat[4] = gpsSerial.read();
-
-
-                        for (byte i = 0; i<7; i++)
-                        {
-                            gpsSerial.read();
-                        }
-
-                        for (byte i = 0; i< 5; i++)
-                        {
-                            bufferLng[i] = gpsSerial.read();
-                        }
-
-                        gpsSerial.read();
-
-                        bufferLng[5] = gpsSerial.read();
                         break;
-                    }
                 }
             }
         }

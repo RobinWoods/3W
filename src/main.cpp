@@ -176,7 +176,7 @@ ISR(TIMER2_OVF_vect) {
             //Si un des boutons est toujours appuyé après les 5s alors on change la variable du mode actuel
             if (digitalRead(GREEN_BUTTON_PIN) == LOW)
             {
-                if (actualMod == STANDARD_MOD)
+                if (actualMod == STANDARD_MOD || actualMod == MAINTENANCE_MOD)
                 {
                     actualMod = ECO_MOD;
                 }

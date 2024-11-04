@@ -12,8 +12,7 @@ extern Parameters params;
 
 extern byte luminosity, humidity, temp;
 extern float pressure;
-extern char bufferLat[6];
-extern char bufferLng[7];
+extern char bufferGPS[27];
 
 void writeInFile();
 void createFile();

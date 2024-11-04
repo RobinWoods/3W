@@ -143,9 +143,8 @@ void writeInFile()
     output->print(";");
     output->print(temp == 0 ? "NA" : String(temp-41));
     output->print(";");
-    output->print(bufferLat);
-    output->print(";");
-    output->print(bufferLng);
+    output->print(bufferGPS);
+
     output->print("\n");
 
 
